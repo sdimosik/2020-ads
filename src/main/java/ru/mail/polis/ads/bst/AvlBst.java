@@ -82,11 +82,12 @@ public class AvlBst<Key extends Comparable<Key>, Value>
         Node node = root;
 
         while (node != null) {
-            if (key.equals(node.key)) {
+            int compareResult = lessThen(key, node.key);
+            if (compareResult == 0) {
                 return node.left == null ? node.key : findMax(node.left).key;
             }
 
-            if (lessThen(key, node.key)) {
+            if (compareResult < 0) {
                 if (node.left == null) {
                     return null;
                 }
@@ -95,7 +96,8 @@ public class AvlBst<Key extends Comparable<Key>, Value>
                 if (node.right == null) {
                     return node.key;
                 }
-                if (!lessThen(node.right.key, key) && !key.equals(node.right.key)) {
+                int compareResultR = lessThen(node.right.key, key);
+                if (compareResultR >= 0 && compareResultR != 0) {
                     return node.key;
                 }
                 node = node.right;
@@ -109,18 +111,17 @@ public class AvlBst<Key extends Comparable<Key>, Value>
         Node node = root;
 
         while (node != null) {
-            if (key.equals(node.key)) {
+            int compareResult = lessThen(key, node.key);
+            if (compareResult == 0) {
                 return node.key;
-            }
-
-            if (lessThen(key, node.key)) {
+            } else if (compareResult < 0) {
                 if (node.left == null) {
                     return node.key;
                 }
                 node = node.left;
             } else {
                 if (node.right == null) {
-                    return lessThen(node.key, key) ? null : node.key;
+                    return null;
                 }
                 node = node.right;
             }
@@ -141,10 +142,11 @@ public class AvlBst<Key extends Comparable<Key>, Value>
     private Node findNodeByKey(Node node, Key key) {
         Node nodeTmp = node;
         while (nodeTmp != null) {
-            if (nodeTmp.key.equals(key)) {
+            int compareResult = lessThen(key, nodeTmp.key);
+            if (compareResult == 0) {
                 return nodeTmp;
             }
-            if (lessThen(key, nodeTmp.key)) {
+            if (compareResult < 0) {
                 nodeTmp = nodeTmp.left;
             } else {
                 nodeTmp = nodeTmp.right;
@@ -153,8 +155,8 @@ public class AvlBst<Key extends Comparable<Key>, Value>
         return null;
     }
 
-    private boolean lessThen(Key key1, Key key2) {
-        return key1.compareTo(key2) < 0;
+    private int lessThen(Key key1, Key key2) {
+        return key1.compareTo(key2);
     }
 
     private int heightJust(Node node) {
@@ -210,9 +212,10 @@ public class AvlBst<Key extends Comparable<Key>, Value>
         if (node == null) {
             return new Node(key, value);
         }
-        if (lessThen(key, node.key)) {
+        int compareResult = lessThen(key, node.key);
+        if (compareResult < 0) {
             node.left = insert(node.left, key, value);
-        } else if (lessThen(node.key, key)) {
+        } else if (compareResult > 0) {
             node.right = insert(node.right, key, value);
         } else {
             node.value = value;
@@ -252,9 +255,10 @@ public class AvlBst<Key extends Comparable<Key>, Value>
             tmpValue = null;
             return null;
         }
-        if (lessThen(key, node.key)) {
+        int compareResult = lessThen(key, node.key);
+        if (compareResult < 0) {
             node.left = removeQ(node.left, key);
-        } else if (lessThen(node.key, key)) {
+        } else if (compareResult > 0) {
             node.right = removeQ(node.right, key);
         } else {
             tmpValue = node.value;
