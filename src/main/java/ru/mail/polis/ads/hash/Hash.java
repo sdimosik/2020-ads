@@ -83,7 +83,11 @@ public class Hash<Key, Value> implements HashTable<Key, Value> {
             data[hash] = new Node<>(key, value);
             ++size;
         } else {
+            int tempSize = data[hash].size();
             data[hash].add(key, value);
+            if (tempSize != data[hash].size()) {
+                ++size;
+            }
         }
     }
 

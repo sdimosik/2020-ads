@@ -44,8 +44,7 @@ class HashTableBaseTest {
     }
     
     HashTable<Key, String> newStrangeKeyTable() {
-        // Use implementation
-        return null;
+        return new Hash<>();
     }
 
     @Test
