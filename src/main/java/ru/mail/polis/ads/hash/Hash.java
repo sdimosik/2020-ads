@@ -3,107 +3,104 @@ package ru.mail.polis.ads.hash;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class Hash<Key, Value> implements HashTable<Key, Value> {
-    private final static float LOAD_FACTOR = 0.75f;
-    private int capacity = 16;
-    private int size = 0;
-    private Node<Key, Value>[] data = new Node[capacity];
+    private static final float LOAD_FACTOR = 0.75F;
+
+    private Node<Key, Value>[] table;
+    private int size;
+    private int capacity;
 
     private static class Node<Key, Value> {
-        private List<Key> keys;
-        private List<Value> values;
+        List<Key> keys;
+        List<Value> values;
 
-        Node() {
-            keys = new ArrayList<>();
-            values = new ArrayList<>();
-        }
-
-        Node(Key key, Value value) {
-            keys = new ArrayList<>(1);
+        public Node(Key key, Value value) {
+            keys = new LinkedList<>();
+            values = new LinkedList<>();
             keys.add(key);
-            values = new ArrayList<>(1);
             values.add(value);
         }
 
-        public void add(Key key, Value value) {
-            int place = keys.indexOf(key);
-            if (place == -1) {
-                keys.add(key);
-                values.add(value);
-                return;
-            }
-            values.set(place, value);
-        }
-
-        @Nullable
-        public Value remove(Key key) {
-            for (int i = 0; i < keys.size(); ++i) {
-                if (keys.get(i).equals(key)) {
-                    keys.remove(i);
-                    return values.remove(i);
-                }
-            }
-            return null;
-        }
-
-        @Nullable
-        public Value get(Key key) {
-            int place = keys.indexOf(key);
-            if (place == -1) {
+        public @Nullable Value get(@NotNull Key key) {
+            int pos = keys.indexOf(key);
+            if (pos == -1) {
                 return null;
             }
-            return values.get(place);
+            return values.get(pos);
+        }
+
+        public boolean put(@NotNull Key key, @NotNull Value value) {
+            int pos = 0;
+            for (Key token : keys) {
+                if (key.equals(token)) {
+                    values.set(pos, value);
+                    return false;
+                }
+                pos++;
+            }
+            keys.add(key);
+            values.add(value);
+            return true;
+        }
+
+        public @Nullable Value remove(@NotNull Key key) {
+            int pos = 0;
+            for (Key token : keys) {
+                if (key.equals(token)) {
+                    return values.remove(pos);
+                }
+                pos++;
+            }
+            return null;
         }
 
         public int size() {
             return values.size();
         }
+
+        public boolean isEmpty() {
+            return values.size() == 0;
+        }
     }
 
-    @Nullable
+    private int hashCode(@NotNull Key key) {
+        return (key.hashCode() & 0x7fffffff) % capacity;
+    }
+
+    public Hash() {
+        capacity = 16;
+        size = 0;
+        table = new Node[capacity];
+    }
+
     @Override
-    public Value get(@NotNull Key key) {
-        int hash = getHashNum(key);
-        if (data[hash] == null) {
-            return null;
-        }
-        return data[hash].get(key);
+    public @Nullable Value get(@NotNull Key key) {
+        int hash = hashCode(key);
+        if (table[hash] == null) return null;
+        return table[hash].get(key);
     }
 
     @Override
     public void put(@NotNull Key key, @NotNull Value value) {
-        if (size > capacity * LOAD_FACTOR) {
-            increaseCapacity();
-        }
-        int hash = getHashNum(key);
-        if (data[hash] == null) {
-            data[hash] = new Node<>(key, value);
-            ++size;
-        } else {
-            int tempSize = data[hash].size();
-            data[hash].add(key, value);
-            if (tempSize != data[hash].size()) {
-                ++size;
-            }
-        }
+        int hash = hashCode(key);
+        if (table[hash] == null) {
+            table[hash] = new Node<>(key, value);
+            size++;
+        } else if (table[hash].put(key, value)) size++;
+        if (isOverflow()) reHashing();
     }
 
-    @Nullable
     @Override
-    public Value remove(@NotNull Key key) {
-        int place = getHashNum(key);
-        if (data[place] != null) {
-            --size;
-            Value val = data[place].remove(key);
-            if (data[place].size() == 0) {
-                data[place] = null;
-            }
-            return val;
-        }
-        return null;
+    public @Nullable Value remove(@NotNull Key key) {
+        int hash = hashCode(key);
+        if (table[hash] == null) return null;
+
+        Value value = table[hash].remove(key);
+        if (table[hash].isEmpty()) table[hash] = null;
+        size--;
+        return value;
     }
 
     @Override
@@ -116,22 +113,18 @@ public class Hash<Key, Value> implements HashTable<Key, Value> {
         return size == 0;
     }
 
-    private int getHashNum(Key key) {
-        return (key.hashCode() & 0x7fffffff) % capacity;
+    private boolean isOverflow() {
+        return (float) size / capacity > LOAD_FACTOR;
     }
 
-    private void increaseCapacity() {
+    private void reHashing() {
         capacity *= 2;
+        Node<Key, Value>[] old = table;
+        table = new Node[capacity];
         size = 0;
-        Node<Key, Value>[] oldElementData = data;
-        data = new Node[capacity];
-        for (Node<Key, Value> oldElementDatum : oldElementData) {
-            if (oldElementDatum != null) {
-                for (int keyNum = 0; keyNum < oldElementDatum.size(); keyNum++) {
-                    Node<Key, Value> oldElem = oldElementDatum;
-                    put(oldElem.keys.get(keyNum), oldElem.values.get(keyNum));
-                }
-            }
+        for (Node<Key, Value> node : old) {
+            if (node == null) continue;
+            for (int i = 0; i < node.size(); i++) put(node.keys.get(i), node.values.get(i));
         }
     }
 }
