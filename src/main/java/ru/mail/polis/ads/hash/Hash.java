@@ -3,7 +3,8 @@ package ru.mail.polis.ads.hash;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
 
 public class Hash<Key, Value> implements HashTable<Key, Value> {
     private static final float LOAD_FACTOR = 0.75F;
@@ -13,43 +14,48 @@ public class Hash<Key, Value> implements HashTable<Key, Value> {
     private int capacity;
 
     private static class Node<Key, Value> {
-        List<Key> keys;
-        List<Value> values;
+        static class Pair<Key, Value> {
+            Key key;
+            Value value;
 
-        public Node(Key key, Value value) {
-            keys = new LinkedList<>();
-            values = new LinkedList<>();
-            keys.add(key);
-            values.add(value);
+            public Pair(Key key, Value value) {
+                this.key = key;
+                this.value = value;
+            }
+        }
+
+        List<Pair<Key, Value>> list;
+
+        public Node(@NotNull Key key, @NotNull Value value) {
+            list = new LinkedList<>();
+            list.add(new Pair<>(key, value));
         }
 
         public @Nullable Value get(@NotNull Key key) {
-            int pos = keys.indexOf(key);
-            if (pos == -1) {
-                return null;
+            for (Pair<Key, Value> pair : list) {
+                if (pair.key.equals(key)) {
+                    return pair.value;
+                }
             }
-            return values.get(pos);
+            return null;
         }
 
         public boolean put(@NotNull Key key, @NotNull Value value) {
-            int pos = 0;
-            for (Key token : keys) {
-                if (key.equals(token)) {
-                    values.set(pos, value);
+            for (Pair<Key, Value> pair : list) {
+                if (pair.key.equals(key)) {
+                    pair.value = value;
                     return false;
                 }
-                pos++;
             }
-            keys.add(key);
-            values.add(value);
+            list.add(new Pair<>(key, value));
             return true;
         }
 
         public @Nullable Value remove(@NotNull Key key) {
             int pos = 0;
-            for (Key token : keys) {
-                if (key.equals(token)) {
-                    return values.remove(pos);
+            for (Pair<Key, Value> pair : list) {
+                if (pair.key.equals(key)) {
+                    return list.remove(pos).value;
                 }
                 pos++;
             }
@@ -57,11 +63,11 @@ public class Hash<Key, Value> implements HashTable<Key, Value> {
         }
 
         public int size() {
-            return values.size();
+            return list.size();
         }
 
         public boolean isEmpty() {
-            return values.size() == 0;
+            return list.size() == 0;
         }
     }
 
@@ -124,7 +130,7 @@ public class Hash<Key, Value> implements HashTable<Key, Value> {
         size = 0;
         for (Node<Key, Value> node : old) {
             if (node == null) continue;
-            for (int i = 0; i < node.size(); i++) put(node.keys.get(i), node.values.get(i));
+            for (int i = 0; i < node.size(); i++) put(node.list.get(i).key, node.list.get(i).value);
         }
     }
 }
